@@ -398,6 +398,62 @@ app.get('/api/hospitals/nearby', (req, res) => {
 });
 
 
+// Add this import at the top of your server.js file with other imports
+const Camp = require('./models/Camp');
+
+// Add these routes to your server.js file
+
+// GET all camps
+app.get('/api/camps', async (req, res) => {
+    try {
+        const camps = await Camp.find({}).sort({ date: 1 }); // Sort by date ascending
+        res.status(200).json(camps);
+    } catch (error) {
+        console.error('❌ Error fetching camps:', error);
+        res.status(500).json({ message: 'Failed to fetch camps.', details: error.message });
+    }
+});
+
+// POST - Add new camp
+app.post('/api/camps', async (req, res) => {
+    try {
+        const { title, organizer, date, time, location, city, expectedDonors, contact, description } = req.body;
+
+        // Validation
+        if (!title || !organizer || !date || !time || !location || !city || !expectedDonors || !contact) {
+            return res.status(400).json({ message: "Missing required fields." });
+        }
+
+        // Determine status based on date
+        const campDate = new Date(date);
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0); // Set to start of today
+        campDate.setHours(0, 0, 0, 0); // Set to start of camp date
+        
+        const status = campDate >= currentDate ? 'Upcoming' : 'Completed';
+
+        const newCamp = await Camp.create({
+            title,
+            organizer,
+            date,
+            time,
+            location,
+            city,
+            expectedDonors: parseInt(expectedDonors),
+            contact,
+            description: description || '',
+            status
+        });
+
+        console.log(`✅ Successfully saved camp to MongoDB: ${newCamp.title}`);
+        res.status(201).json({ message: "Camp added successfully.", camp: newCamp });
+    } catch (error) {
+        console.error('❌ Error saving camp to MongoDB:', error);
+        res.status(500).json({ message: "Failed to add camp.", details: error.message });
+    }
+});
+
+
 
 // Basic route
 app.get('/', (req, res) => {
